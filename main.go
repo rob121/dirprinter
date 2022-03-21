@@ -11,7 +11,9 @@ import(
 	"strings"
 	"github.com/spf13/viper"
 	"os/exec"
-	)
+	"time"
+	"context"
+)
 
 var conf *viper.Viper
 
@@ -43,7 +45,7 @@ func main(){
 
 					if(strings.Contains(event.Name,".pdf")) {
 						log.Printf("%#v", event)
-						handleFile(event)
+						go handleFile(event)
 					}
 				}
 			case err, ok := <-watcher.Errors:
@@ -65,21 +67,26 @@ func main(){
 
 func handleFile(event fsnotify.Event){
 
-	printcmd:= conf.GetString(fmt.Sprintf("%s.printcmd",runtime.GOOS))
+	printcmd:= conf.GetStringSlice(fmt.Sprintf("%s.printcmd",runtime.GOOS))
 	printer:= conf.GetString(fmt.Sprintf("%s.printer",runtime.GOOS))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	defer cancel()
 
 	cmd := &exec.Cmd{}
 
-	log.Println("Running:",printcmd)
+	log.Println("Running:",strings.Join(printcmd," "))
 
 	if len(printer)>0 {
+		printcmd = append(printcmd,event.Name)
+		printcmd = append(printcmd,printer)
 
-
-		cmd = exec.Command(printcmd,event.Name,printer)
+		cmd = exec.CommandContext(ctx,printcmd[0],printcmd[1:]...)
 
 	}else {
-
-		cmd = exec.Command(printcmd,event.Name)
+		printcmd = append(printcmd,event.Name)
+		cmd = exec.CommandContext(ctx,printcmd[0],printcmd[1:]...)
 
 	}
 
