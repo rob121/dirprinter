@@ -5,7 +5,7 @@
     "dirwatch": "C:\\Users\\Example\\Downloads"
   },
   "darwin": {
-    "printcmd": ["C:\\Program Files\\Adobe\\Reader 10.0\\Reader\\AcroRd32.exe","/t"],
+    "printcmd": ["/usr/bin/lpr"],
     "printer": "",
     "dirwatch": "/Users/ralfonso/Downloads"
   }

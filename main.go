@@ -1,33 +1,106 @@
 package main
 
-import(
+import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/getlantern/systray"
+	"github.com/rob121/dirprinter/icon"
 	"github.com/rob121/vhelp"
+	"github.com/spf13/viper"
 	"log"
 	"os"
-	"runtime"
-	"strings"
-	"github.com/spf13/viper"
 	"os/exec"
+	"runtime"
+	"path"
+	"strings"
 	"time"
-	"context"
+	"flag"
 )
 
 var conf *viper.Viper
+var status chan string
+var dstat chan string
+var debug bool
 
 func main(){
 
+	flag.BoolVar(&debug,"debug",false,"Debug Mode?")
+	flag.Parse()
+
+	status = make(chan string)
+	dstat = make(chan string)
+
 	vhelp.Load("config")
 	conf,_ = vhelp.Get("config")
+
+	go loadDirWatch()
+
+	go systray.Run(onReady, onExit)
+
+	select{}
+
+}
+
+func onReady() {
+
+	dirwatch:= conf.GetString(fmt.Sprintf("%s.dirwatch",runtime.GOOS))
+
+	systray.SetIcon(icon.Data)
+//	systray.SetTitle("Print Watcher")
+	systray.AddMenuItem(fmt.Sprintf("Watching: %s",dirwatch), "")
+
+	mStatus := systray.AddMenuItem("Idle...", "")
+
+	var mDebug = &systray.MenuItem{}
+
+	if(debug){
+
+	mDebug = systray.AddMenuItem("Debug Window...", "")
+
+	}
+
+	mQuit := systray.AddMenuItem("Quit", "Exit")
+
+	// Sets the icon of a menu item. Only available on Mac and Windows.
+	//mQuit.SetIcon(icon.Data)
+
+	for {
+		select {
+		case <-mQuit.ClickedCh:
+			systray.Quit()
+			os.Exit(1)
+			return
+		case s:= <-status:
+			mStatus.SetTitle(s)
+		case ds:= <-dstat:
+			if(debug) {
+				mDebug.SetTitle(ds)
+			}
+		}
+
+	}
+
+}
+
+func onExit() {
+	// clean up here
+
+	os.Exit(1)
+}
+
+func loadDirWatch(){
+
+
     dirwatch:= conf.GetString(fmt.Sprintf("%s.dirwatch",runtime.GOOS))
 
     log.Println("Watching for PDF in: ",dirwatch)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 	defer watcher.Close()
 
@@ -76,6 +149,8 @@ func handleFile(event fsnotify.Event){
 
 	cmd := &exec.Cmd{}
 
+	status <- fmt.Sprintf("Printing: %s",path.Base(event.Name))
+
 	log.Println("Running:",strings.Join(printcmd," "))
 
 	if len(printer)>0 {
@@ -90,6 +165,7 @@ func handleFile(event fsnotify.Event){
 
 	}
 
+	dstat <- fmt.Sprint("Print CMD:",strings.Join(printcmd," "))
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -112,5 +188,10 @@ func handleFile(event fsnotify.Event){
 		log.Println(rerr)
 		return
 	}
+
+	time.Sleep(5 * time.Second)
+
+	status <- "Idle..."
+	dstat <- "Debug Window..."
 }
 
