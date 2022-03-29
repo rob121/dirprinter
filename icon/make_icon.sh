@@ -22,7 +22,17 @@ fi
 if [ ! -f "$1" ]; then
     echo $1 is not a valid file
     exit
-fi    
+fi
+
+if [ -z "$2" ]; then
+    echo Please specify a ico file
+    exit
+fi
+
+if [ ! -f "$2" ]; then
+    echo $2 is not a valid file
+    exit
+fi
 
 OUTPUT=iconunix.go
 echo Generating $OUTPUT
@@ -33,4 +43,15 @@ if [ $? -ne 0 ]; then
     echo Failure generating $OUTPUT
     exit
 fi
+
+OUTPUT=iconwin.go
+echo Generating $OUTPUT
+echo "//+build windows" > $OUTPUT
+echo >> $OUTPUT
+cat "$2" | $GOPATH/bin/2goarray Data icon >> $OUTPUT
+if [ $? -ne 0 ]; then
+    echo Failure generating $OUTPUT
+    exit
+fi
+
 echo Finished
