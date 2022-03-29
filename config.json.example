@@ -8,11 +8,11 @@
   "darwin": {
     "printcmd": ["/usr/bin/lpr"],
     "printer": "",
-    "dirwatch": "/Users/ralfonso/Downloads"
+    "dirwatch": "/Users/example/Downloads"
   },
   "mist": {
-    "host": "floridarangers.com:1445",
-    "token": "2935017702c7ef27ee028048f949b660",
+    "host": "example.com:1445",
+    "token": "abc123",
     "tags": ["labelprinter"]
   }
 }
