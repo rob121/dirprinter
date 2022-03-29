@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 if [[ $# -eq 0 ]] ; then
   echo "Provide a output path for the binary"
   exit 1
